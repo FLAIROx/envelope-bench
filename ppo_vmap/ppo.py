@@ -290,8 +290,8 @@ def make_block_fn(block_size: int, logger: Logger):
     @nnx.scan(in_axes=nnx.Carry, length=block_size)
     def train_block(ts: TrainState):
         out_info = train_step(ts)
-        mean_return = out_info.final.stats.reward.mean()
-        mean_episode_length = out_info.final.stats.length.mean()
+        mean_return = jnp.nanmean(out_info.final.stats.reward.mean)
+        mean_episode_length = jnp.nanmean(out_info.final.stats.length)
         jax.debug.callback(
             logger.log,
             ts.global_steps,
