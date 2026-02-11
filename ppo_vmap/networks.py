@@ -43,19 +43,18 @@ class ValueFunction(nnx.Module):
         rngs: nnx.Rngs,
         layer_size: int = 256,
         activation: str = "swish",
-        layer_norm: bool = False,
     ):
         in_dim = np.prod(obs_space.shape)
         act = get_activation(activation)
         self.layers = nnx.Sequential(
             ortho_linear(in_dim, layer_size, rngs),
-            nnx.LayerNorm(layer_size, rngs=rngs) if layer_norm else Identity(),
+            nnx.LayerNorm(layer_size, rngs=rngs),
             act,
             ortho_linear(layer_size, layer_size, rngs),
-            nnx.LayerNorm(layer_size, rngs=rngs) if layer_norm else Identity(),
+            nnx.LayerNorm(layer_size, rngs=rngs),
             act,
             ortho_linear(layer_size, layer_size, rngs),
-            nnx.LayerNorm(layer_size, rngs=rngs) if layer_norm else Identity(),
+            nnx.LayerNorm(layer_size, rngs=rngs),
             act,
             ortho_linear(layer_size, 1, rngs, scale=1.0),
         )
@@ -72,7 +71,6 @@ class GaussianPolicy(nnx.Module):
         rngs: nnx.Rngs,
         layer_size: int = 256,
         activation: str = "swish",
-        layer_norm: bool = False,
     ):
         in_dim = np.prod(obs_space.shape)
         out_dim = np.prod(action_space.shape)
@@ -82,13 +80,13 @@ class GaussianPolicy(nnx.Module):
         act = get_activation(activation)
         self.layers = nnx.Sequential(
             ortho_linear(in_dim, layer_size, rngs),
-            nnx.LayerNorm(layer_size, rngs=rngs) if layer_norm else Identity(),
+            nnx.LayerNorm(layer_size, rngs=rngs),
             act,
             ortho_linear(layer_size, layer_size, rngs),
-            nnx.LayerNorm(layer_size, rngs=rngs) if layer_norm else Identity(),
+            nnx.LayerNorm(layer_size, rngs=rngs),
             act,
             ortho_linear(layer_size, layer_size, rngs),
-            nnx.LayerNorm(layer_size, rngs=rngs) if layer_norm else Identity(),
+            nnx.LayerNorm(layer_size, rngs=rngs),
             act,
         )
         self.action_mean = ortho_linear(layer_size, out_dim, rngs, scale=0.01)
@@ -155,7 +153,6 @@ class DiscretePolicy(nnx.Module):
         rngs: nnx.Rngs,
         layer_size: int = 256,
         activation: str = "swish",
-        layer_norm: bool = False,
     ):
         in_dim = jnp.prod(jnp.array(obs_space.shape))
         out_dim = jnp.prod(jnp.asarray(action_space.n))
@@ -163,10 +160,10 @@ class DiscretePolicy(nnx.Module):
         act = get_activation(activation)
         self.layers = nnx.Sequential(
             ortho_linear(in_dim, layer_size, rngs),
-            nnx.LayerNorm(layer_size, rngs=rngs) if layer_norm else Identity(),
+            nnx.LayerNorm(layer_size, rngs=rngs),
             act,
             ortho_linear(layer_size, layer_size, rngs),
-            nnx.LayerNorm(layer_size, rngs=rngs) if layer_norm else Identity(),
+            nnx.LayerNorm(layer_size, rngs=rngs),
             act,
             ortho_linear(layer_size, out_dim, rngs, scale=0.01),
         )

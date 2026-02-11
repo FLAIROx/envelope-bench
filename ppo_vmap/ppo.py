@@ -19,7 +19,9 @@ class Args:
     env_name: str = "gymnax::CartPole-v1"
     total_timesteps: int = 100_000_000
     policy_lr: float = 0.0003
+    policy_wd: float = 0.0001
     value_fn_lr: float = 0.0001
+    value_wd: float = 0.0001
     epsilon: float = 0.2
     entropy_coef: float = 0.01
     num_envs: int = 1000
@@ -27,12 +29,15 @@ class Args:
     num_minibatches: int = 5
     num_epochs: int = 5
     num_steps: int = 100
-    gamma: float = 0.995
+    gamma: float = 0.99
     gae_lambda: float = 0.95
     normalize_observations: bool = True
     discretize_actions: bool = False
-    activation: str = "swish"
     seed: int = 0
+
+    # network arch
+    activation: str = "swish"
+    layer_size: int = 256
 
     # logging
     use_wandb: bool = False
@@ -93,22 +98,20 @@ class TrainState(nnx.Pytree):
             env.action_space,
             self.rngs,
             activation=args.activation,
-            layer_norm=args.layer_norm,
+            layer_size=args.layer_size,
         )
         self.value_fn = ValueFunction(
             env.observation_space,
             self.rngs,
             activation=args.activation,
-            layer_norm=args.layer_norm,
+            layer_size=args.layer_size,
         )
 
         # Initialize optimizers
-        self.policy_optimizer = nnx.Optimizer(
-            self.policy, optax.adamw(args.policy_lr), wrt=nnx.Param
-        )
-        self.value_fn_optimizer = nnx.Optimizer(
-            self.value_fn, optax.adamw(args.value_fn_lr), wrt=nnx.Param
-        )
+        policy_opt = optax.adamw(args.policy_lr, eps=1e-5, weight_decay=args.policy_wd)
+        self.policy_optimizer = nnx.Optimizer(self.policy, policy_opt, wrt=nnx.Param)
+        value_opt = optax.adamw(args.value_fn_lr, eps=1e-5, weight_decay=args.value_wd)
+        self.value_fn_optimizer = nnx.Optimizer(self.value_fn, value_opt, wrt=nnx.Param)
 
         # Initialize environment state and info
         env_state, env_info = self.vecenv.init(self.rngs())
@@ -218,39 +221,57 @@ def update_policy(ts: TrainState, batch):
         log_prob = pi.log_prob(batch.action)
         entropy = pi.entropy().mean()
 
-        ratio = jnp.exp(log_prob - batch.log_prob)
+        log_ratio = log_prob - batch.log_prob
+        ratio = jnp.exp(log_ratio)
         clip_ratio = jnp.clip(ratio, 1 - ts.args.epsilon, 1 + ts.args.epsilon)
         advantages = normalize(batch.advantages)
 
         surrogate1 = ratio * advantages
         surrogate2 = clip_ratio * advantages
         policy_loss = -jnp.mean(jnp.minimum(surrogate1, surrogate2))
-
         loss = policy_loss - ts.args.entropy_coef * entropy
-        return loss, (policy_loss, entropy)
 
-    (loss, (policy_loss, entropy)), grads = loss_fn(ts.policy)
+        clip_frac = jnp.mean(ratio != clip_ratio)
+        approx_kl = jnp.mean(((ratio - 1) - log_ratio))
+        metrics = {
+            "policy_clipped_surrogate_loss": policy_loss,
+            "policy_entropy": entropy,
+            "policy_clip_frac": clip_frac,
+            "policy_approx_kl": approx_kl,
+        }
+        return loss, metrics
+
+    (loss, loss_metrics), grads = loss_fn(ts.policy)
     ts.policy_optimizer.update(ts.policy, grads)
+    _, state = nnx.split(ts.policy)
+    param_norm = optax.global_norm(state)
     grad_norm = optax.global_norm(grads)
     return {
         "policy_loss": loss,
-        "policy_clipped_surrogate_loss": policy_loss,
-        "policy_entropy": entropy,
         "policy_grad_norm": grad_norm,
+        "policy_param_norm": param_norm,
+        **loss_metrics,
     }
 
 
 def update_value_fn(ts: TrainState, batch):
-    @nnx.value_and_grad
+    @nnx.value_and_grad(has_aux=True)
     def loss_fn(value_fn):
         targets = batch.value + batch.advantages
         values = value_fn(batch.obs)
-        return 0.5 * jnp.mean((values - targets) ** 2)
+        return 0.5 * jnp.mean((values - targets) ** 2), values.mean()
 
-    loss, grads = loss_fn(ts.value_fn)
+    (loss, values), grads = loss_fn(ts.value_fn)
     ts.value_fn_optimizer.update(ts.value_fn, grads)
     grad_norm = optax.global_norm(grads)
-    return {"value_loss": loss, "value_grad_norm": grad_norm}
+    _, state = nnx.split(ts.value_fn)
+    param_norm = optax.global_norm(state)
+    return {
+        "value_loss": loss,
+        "value_grad_norm": grad_norm,
+        "value_param_norm": param_norm,
+        "mean_value_prediction": values,
+    }
 
 
 def update_epoch(ts: TrainState, minibatches):
@@ -290,18 +311,27 @@ def make_block_fn(block_size: int, logger: Logger):
     @nnx.scan(in_axes=nnx.Carry, length=block_size)
     def train_block(ts: TrainState):
         out_info = train_step(ts)
-        mean_return = jnp.nanmean(out_info.final.stats.reward.mean)
-        mean_episode_length = jnp.nanmean(out_info.final.stats.length)
-        jax.debug.callback(
-            logger.log,
-            ts.global_steps,
-            ts.run_idx,
-            mean_return,
-            mean_episode_length,
-            out_info.policy_loss,
-            out_info.value_loss,
-            out_info.policy_entropy,
-        )
+        mean_return = out_info.final.stats.reward.mean()
+        mean_episode_length = out_info.final.stats.length.mean()
+        metrics = {
+            "mean_return": mean_return,
+            "mean_episode_length": mean_episode_length,
+        }
+        other_keys = [
+            "policy_loss",
+            "policy_entropy",
+            "policy_grad_norm",
+            "policy_param_norm",
+            "policy_approx_kl",
+            "policy_clip_frac",
+            "value_loss",
+            "value_grad_norm",
+            "value_param_norm",
+        ]
+        other_metrics = {k: getattr(out_info, k) for k in other_keys}
+        metrics.update(other_metrics)
+
+        jax.debug.callback(logger.log, ts.global_steps, ts.run_idx, metrics)
         return ts, mean_return
 
     return train_block
