@@ -36,6 +36,14 @@ def get_activation(name: str):
     raise ValueError(f"Unknown activation: {name}")
 
 
+def symexp(x):
+    return jnp.sign(x) * (jnp.exp(jnp.abs(x)) - 1)
+
+
+def symlog(x):
+    return jnp.sign(x) * jnp.log(jnp.abs(x) + 1)
+
+
 class ValueFunction(nnx.Module):
     def __init__(
         self,
@@ -43,9 +51,11 @@ class ValueFunction(nnx.Module):
         rngs: nnx.Rngs,
         layer_size: int = 256,
         activation: str = "swish",
+        use_symexp: bool = False,
     ):
         in_dim = np.prod(obs_space.shape)
         act = get_activation(activation)
+        self.use_symexp = use_symexp
         self.layers = nnx.Sequential(
             ortho_linear(in_dim, layer_size, rngs),
             nnx.LayerNorm(layer_size, rngs=rngs),
@@ -60,6 +70,12 @@ class ValueFunction(nnx.Module):
         )
 
     def __call__(self, obs: jax.Array) -> jax.Array:
+        v = self.raw(obs)
+        if self.use_symexp:
+            v = symexp(v)
+        return v
+
+    def raw(self, obs: jax.Array) -> jax.Array:
         return self.layers(obs).squeeze(-1)
 
 

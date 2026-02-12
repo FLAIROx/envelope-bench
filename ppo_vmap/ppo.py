@@ -11,8 +11,13 @@ import envelope
 from envelope.typing import PyTree
 from ppo_vmap.discretize_action_wrapper import DiscretizeActionWrapper
 from ppo_vmap.logger import Logger
-from ppo_vmap.networks import DiscretePolicy, GaussianPolicy, ValueFunction
-from ppo_vmap.stagger_wrapper import StaggerWrapper
+from ppo_vmap.networks import (
+    DiscretePolicy,
+    GaussianPolicy,
+    ValueFunction,
+    symexp,
+    symlog,
+)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -41,6 +46,7 @@ class Args:
     # network arch
     activation: str = "swish"
     layer_size: int = 256
+    use_symlog: bool = False
 
     # logging
     use_wandb: bool = False
@@ -108,6 +114,7 @@ class TrainState(nnx.Pytree):
             self.rngs,
             activation=args.activation,
             layer_size=args.layer_size,
+            use_symexp=args.use_symlog,
         )
 
         # Initialize optimizers
@@ -118,8 +125,22 @@ class TrainState(nnx.Pytree):
 
         # Initialize environment state and info
         env_state, env_info = self.vecenv.init(self.rngs())
+        if args.stagger_steps > 0:
+            num_stagger_steps = args.stagger_steps * jnp.arange(args.num_envs)
+            num_stagger_steps = num_stagger_steps % self.vecenv.max_steps
+            env_state = stagger_env_state(env_state, num_stagger_steps)
+
         self.env_state = nnx.data(env_state)
         self.env_info = nnx.data(env_info)
+
+
+def stagger_env_state(env_state, num_steps):
+    if isinstance(env_state, envelope.TruncationWrapper.TruncationState):
+        return env_state.replace(steps=num_steps)
+    if isinstance(env_state, envelope.WrappedState):
+        inner_state = stagger_env_state(env_state.inner_state, num_steps)
+        return env_state.replace(inner_state=inner_state)
+    raise ValueError("No TruncationState found in wrapper stack.")
 
 
 def make_train_states(args: Args):
@@ -261,8 +282,11 @@ def update_value_fn(ts: TrainState, batch):
     @nnx.value_and_grad(has_aux=True)
     def loss_fn(value_fn):
         targets = batch.value + batch.advantages
-        values = value_fn(batch.obs)
-        return 0.5 * jnp.mean((values - targets) ** 2), values.mean()
+        raw_values = value_fn.raw(batch.obs)
+        if args.use_symlog:
+            targets = symlog(targets)
+        values = raw_values if not args.use_symlog else symexp(raw_values)
+        return 0.5 * jnp.mean((raw_values - targets) ** 2), values.mean()
 
     (loss, values), grads = loss_fn(ts.value_fn)
     ts.value_fn_optimizer.update(ts.value_fn, grads)
@@ -273,7 +297,7 @@ def update_value_fn(ts: TrainState, batch):
         "value_loss": loss,
         "value_grad_norm": grad_norm,
         "value_param_norm": param_norm,
-        "mean_value_prediction": values,
+        "value_mean_prediction": values,
     }
 
 
