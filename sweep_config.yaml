@@ -3,7 +3,7 @@ command:
   - -m
   - ppo_vmap.ppo
   - ${args}
-name: ppo-big-sweep
+name: big-ppo-sweep
 method: grid
 metric:
   name: mean_return
@@ -12,6 +12,12 @@ parameters:
   # --- Fixed Parameters —
   total_timesteps:
     value: 100000000 # 100M
+  wandb_entity:
+    value: flair
+  wandb_project:
+    value: big-ppo-sweep
+  use_wandb:
+    value: True
 
 
   # --- Experiment Configuration ---
@@ -253,37 +259,37 @@ parameters:
       - kinetix::s/h8_unicycle_balance
       - kinetix::s/h9_explode_then_thrust_over
   seed:
-    values: [0]
+    value: 0
   num_envs:
-    values: [1024]
+    value: 1024
   num_steps:
-    values: [64]
+    value: 64
   num_epochs:
-    values: [4]
+    value: 4
   num_minibatches:
-    values: [8]
+    value: 8
   policy_lr:
-    values: [3e-4]
+    value: 3e-4
   value_fn_lr:
-    values: [3e-4]
+    value: 3e-4
   policy_wd:
-    values: [0.0001]
+    value: 0.0001
   value_wd:
-    values: [0.0001]
+    value: 0.0001
   gamma:
-    values: [0.99]
+    value: 0.99
   gae_lambda:
-    values: [0.95]
+    value: 0.95
   entropy_coef:
-    values: [0.01]
+    value: 0.01
   epsilon:
-    values: [0.2]
+    value: 0.2
   normalize_observations:
-    values: [True]
+    value: True
   normalize_rewards:
-    values: [False]
+    value: False
   use_symlog:
-    values: [True]
+    value: True
   layer_size:
     value: 256
   activation:
@@ -291,8 +297,9 @@ parameters:
   stagger_steps:
     value: 1
   pool_size:
-    values: [16]
+    value: 16
   num_runs: 
-    values: [8]
-
+    value: 8
+  num_checkpoints:
+    value: 1
 
