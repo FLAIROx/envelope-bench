@@ -75,27 +75,11 @@ class Logger:
 
         print(f"Run directory: {self.run_dir}")
 
-    def log(
-        self,
-        global_steps,
-        run_idx,
-        mean_return,
-        mean_episode_length,
-        policy_loss,
-        value_loss,
-        policy_entropy,
-    ):
+    def log(self, global_steps, run_idx, metrics):
         """Called from jax.debug.callback inside vmap. Buffers until all runs report."""
         step = int(global_steps)
         run_idx = int(run_idx)
-
-        metrics = {
-            "mean_return": float(mean_return),
-            "mean_episode_length": float(mean_episode_length),
-            "policy_loss": float(policy_loss),
-            "value_loss": float(value_loss),
-            "policy_entropy": float(policy_entropy),
-        }
+        metrics = jax.tree.map(float, metrics)
 
         if step not in self.buffers:
             self.buffers[step] = {}

@@ -12,6 +12,7 @@ from envelope.typing import PyTree
 from ppo_vmap.discretize_action_wrapper import DiscretizeActionWrapper
 from ppo_vmap.logger import Logger
 from ppo_vmap.networks import DiscretePolicy, GaussianPolicy, ValueFunction
+from ppo_vmap.stagger_wrapper import StaggerWrapper
 
 
 @dataclasses.dataclass(frozen=True)
@@ -34,6 +35,8 @@ class Args:
     normalize_observations: bool = True
     discretize_actions: bool = False
     seed: int = 0
+
+    stagger_steps: int = 0
 
     # network arch
     activation: str = "swish"
@@ -327,6 +330,7 @@ def make_block_fn(block_size: int, logger: Logger):
             "value_loss",
             "value_grad_norm",
             "value_param_norm",
+            "value_mean_prediction",
         ]
         other_metrics = {k: getattr(out_info, k) for k in other_keys}
         metrics.update(other_metrics)
