@@ -10,6 +10,7 @@ from envelope.wrappers.observation_normalization_wrapper import (
     ObservationNormalizationWrapper,
 )
 from envelope.wrappers.pooled_init_vmap_wrapper import PooledInitVmapWrapper
+from envelope.wrappers.reward_normalization_wrapper import RewardNormalizationWrapper
 from envelope.wrappers.state_injection_wrapper import StateInjectionWrapper
 from envelope.wrappers.truncation_wrapper import TruncationWrapper
 from envelope.wrappers.vmap_envs_wrapper import VmapEnvsWrapper
@@ -29,6 +30,7 @@ __all__ = [
     "FlattenObservationWrapper",
     "ObservationNormalizationWrapper",
     "PooledInitVmapWrapper",
+    "RewardNormalizationWrapper",
     "StateInjectionWrapper",
     "TruncationWrapper",
     "VmapWrapper",

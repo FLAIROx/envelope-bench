@@ -49,7 +49,16 @@ class Logger:
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         self.run_name = f"{args.env_name}_{timestamp}"
         self.run_dir = os.path.abspath(os.path.join("runs", args.env_name, timestamp))
-        os.makedirs(self.run_dir, exist_ok=True)
+        try:
+            os.makedirs(self.run_dir, exist_ok=True)
+        # linux filesystem doesnt allow for :: in directory names
+        except OSError as e:
+            print(
+                f"Error creating run directory {self.run_dir}: {e}, "
+                f"saving to {self.run_dir.replace('::', '-')}"
+            )
+            self.run_dir = self.run_dir.replace("::", "-")
+            os.makedirs(self.run_dir, exist_ok=True)
 
         # Save config
         config_path = os.path.join(self.run_dir, "config.json")
@@ -113,7 +122,7 @@ class Logger:
         for key in keys:
             values = [all_metrics[rid][key] for rid in sorted(all_metrics)]
             per_run[key] = values
-            averaged[key] = np.mean(values)
+            averaged[key] = np.nanmean(values)
 
         # Append to HDF5
         self._h5_append("steps", step)
@@ -126,7 +135,8 @@ class Logger:
         # Print
         print(
             f"step: {step}, "
-            f"mean_return: {averaged['mean_return']:.4f}, "
+            f"mean_return: {averaged['mean_return']:.2f}"
+            f"±{averaged['std_return']:.2f}, "
             f"sps: {self._sps:.0f}, "
             f"policy_loss: {averaged['policy_loss']:.4f}, "
             f"value_loss: {averaged['value_loss']:.4f}"
@@ -136,7 +146,7 @@ class Logger:
             wandb_data = {**averaged, "time/sps": self._sps}
             if self.num_runs > 1:
                 for key in keys:
-                    wandb_data[f"{key}_std"] = np.std(per_run[key])
+                    wandb_data[f"{key}_std"] = np.nanstd(per_run[key])
             wandb.log(wandb_data, step=step)
 
     def _h5_append(self, key: str, value):

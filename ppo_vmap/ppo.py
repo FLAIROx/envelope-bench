@@ -30,21 +30,22 @@ class Args:
     value_wd: float = 0.0001
     epsilon: float = 0.2
     entropy_coef: float = 0.01
-    num_envs: int = 1000
-    pool_size: int = 10
-    num_minibatches: int = 5
-    num_epochs: int = 5
-    num_steps: int = 100
+    num_envs: int = 2000
+    pool_size: int = 20
+    num_minibatches: int = 20
+    num_epochs: int = 8
+    num_steps: int = 10
     gamma: float = 0.99
     gae_lambda: float = 0.95
     normalize_observations: bool = True
+    normalize_rewards: bool = False
     discretize_actions: bool = False
     seed: int = 0
 
-    stagger_steps: int = 0
+    stagger_steps: int = 1
 
     # network arch
-    activation: str = "swish"
+    activation: str = "tanh"
     layer_size: int = 256
     use_symlog: bool = False
 
@@ -55,7 +56,7 @@ class Args:
     log_every: int = 1
 
     # parallelism: pmap across devices, vmap within each device
-    num_runs: int = 1
+    num_runs: int = 16
 
     # checkpointing
     num_checkpoints: int = 0
@@ -78,6 +79,9 @@ def make_env(args: Args):
     )
     if args.normalize_observations:
         vecenv = envelope.ObservationNormalizationWrapper(vecenv)
+    if args.normalize_rewards:
+        vecenv = envelope.RewardNormalizationWrapper(vecenv, discount=args.gamma)
+
     return env, vecenv
 
 
@@ -339,10 +343,14 @@ def make_block_fn(block_size: int, logger: Logger):
     def train_block(ts: TrainState):
         out_info = train_step(ts)
         mean_return = out_info.final.stats.reward.mean()
+        std_return = out_info.final.stats.reward.std()
         mean_episode_length = out_info.final.stats.length.mean()
+        std_episode_length = out_info.final.stats.length.std()
         metrics = {
             "mean_return": mean_return,
+            "std_return": std_return,
             "mean_episode_length": mean_episode_length,
+            "std_episode_length": std_episode_length,
         }
         other_keys = [
             "policy_loss",
