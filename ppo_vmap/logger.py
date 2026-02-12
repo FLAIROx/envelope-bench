@@ -167,7 +167,16 @@ class Logger:
         state = jax.tree.map(lambda x: jax.device_put(x[0, 0], cpu), state)
 
         path = os.path.join(self.run_dir, "checkpoints", f"step_{global_step}")
-        self._checkpointer.save(path, state)
+        try:
+            self._checkpointer.save(path, state)
+        except ValueError:
+            # mujoco_playground state has arrays with zero size. If so, we save without
+            # the train_state without the current env_info
+            env_info = train_states.env_info
+            train_states.env_info = None
+            self._checkpointer.save(path, state)
+            train_states.env_info = env_info
+
         print(f"Started saving checkpoint (will finish asynchronously): {path}")
 
     def log_once(self, data: dict):

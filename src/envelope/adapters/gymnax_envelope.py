@@ -106,6 +106,9 @@ class GymnaxEnvelope(Environment):
         obs, env_state, reward, done, env_info = step_fn(
             subkey, state.env_state, action, self.env_params
         )
+        reward = jnp.asarray(reward, dtype=float)
+        done = jnp.asarray(done, dtype=bool)
+
         state = state.update(key=key, env_state=env_state)
         info = InfoContainer(obs=obs, reward=reward, terminated=done)
         info = info.update(info=env_info)

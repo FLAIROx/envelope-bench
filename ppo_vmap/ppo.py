@@ -19,6 +19,8 @@ from ppo_vmap.networks import (
     symlog,
 )
 
+DEFAULT_MAX_STEPS = 1000
+
 
 @dataclasses.dataclass(frozen=True)
 class Args:
@@ -63,6 +65,10 @@ class Args:
 
 def make_env(args: Args):
     env = envelope.create(args.env_name)
+
+    if not hasattr(env, "max_steps"):
+        env = envelope.TruncationWrapper(env, max_steps=DEFAULT_MAX_STEPS)
+
     env = envelope.ContinuousObservationWrapper(env)
     env = envelope.FlattenObservationWrapper(env)
     env = envelope.FlattenActionWrapper(env)
