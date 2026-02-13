@@ -130,7 +130,7 @@ def _spec_to_tree(spec: Spec | PyTree):
         if jnp.issubdtype(dtype, jnp.floating):
             low = jnp.full(spec.shape, -jnp.inf, dtype=dtype)
             high = jnp.full(spec.shape, jnp.inf, dtype=dtype)
-        elif jnp.issubdtype(dtype, jnp.int_):
+        elif jnp.issubdtype(dtype, jnp.integer):
             low, high = jnp.iinfo(dtype).min, jnp.iinfo(dtype).max
             low = jnp.full(spec.shape, low, dtype=dtype)
             high = jnp.full(spec.shape, high, dtype=dtype)
