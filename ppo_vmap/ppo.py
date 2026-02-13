@@ -352,12 +352,11 @@ def train_step(ts: TrainState):
     size = loss_infos["policy/clip_frac"].shape
     clip_fracs_per_epoch = loss_infos["policy/clip_frac"].mean(axis=1)
     epoch_clip_frac_dict = {
-        f"epoch/clip_frac_{i}": clip_fracs_per_epoch[i]
-        for i in range(size[0])
+        f"policy/clip_frac_{i}": clip_fracs_per_epoch[i] for i in range(size[0])
     }
-    # jax.debug.print(f"epoch_clip_frac_dict: {epoch_clip_frac_dict}")
     loss_infos = jax.tree.map(jnp.mean, loss_infos)
-    return info.update(**loss_infos, **epoch_clip_frac_dict)
+    loss_infos = {**loss_infos, **epoch_clip_frac_dict}
+    return info.update(loss_infos=loss_infos)
 
 
 def make_block_fn(block_size: int, logger: Logger):
@@ -372,25 +371,9 @@ def make_block_fn(block_size: int, logger: Logger):
         std_episode_length = out_info.final.stats.length.std()
         metrics = {
             "episode/return": mean_return,
-            "episode/return_std": std_return,
             "episode/length": mean_episode_length,
-            "episode/length_std": std_episode_length,
+            **out_info.loss_infos,
         }
-        other_keys = [
-            "policy/loss",
-            "policy/entropy",
-            "policy/grad_norm",
-            "policy/param_norm",
-            "policy/approx_kl",
-            "policy/clip_frac",
-            "value/loss",
-            "value/grad_norm",
-            "value/param_norm",
-            "value/mean_prediction",
-        ]
-        other_metrics = {k: getattr(out_info, k) for k in other_keys}
-        metrics.update(other_metrics)
-
         jax.debug.callback(logger.log, ts.global_steps, ts.run_idx, metrics)
         return ts, mean_return
 
