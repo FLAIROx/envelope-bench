@@ -25,7 +25,7 @@ DEFAULT_MAX_STEPS = 1000
 @dataclasses.dataclass(frozen=True)
 class Args:
     env_name: str = "gymnax::CartPole-v1"
-    total_timesteps: int = 100_000_000
+    total_timesteps: int = 1_000_000
     policy_lr: float = 0.0003
     policy_wd: float = 0.0001
     value_fn_lr: float = 0.0001
@@ -53,7 +53,7 @@ class Args:
 
     # logging
     use_wandb: bool = False
-    wandb_entity: str | None = None
+    wandb_entity: str | None = "flair"
     wandb_project: str | None = "envelope-ppo"
     log_every: int = 1
 
@@ -278,10 +278,10 @@ def update_policy(ts: TrainState, batch):
         clip_frac = jnp.mean(ratio != clip_ratio)
         approx_kl = jnp.mean(((ratio - 1) - log_ratio))
         metrics = {
-            "policy_clipped_surrogate_loss": policy_loss,
-            "policy_entropy": entropy,
-            "policy_clip_frac": clip_frac,
-            "policy_approx_kl": approx_kl,
+            "policy/clipped_surrogate_loss": policy_loss,
+            "policy/entropy": entropy,
+            "policy/clip_frac": clip_frac,
+            "policy/approx_kl": approx_kl,
         }
         return loss, metrics
 
@@ -291,9 +291,9 @@ def update_policy(ts: TrainState, batch):
     param_norm = optax.global_norm(state)
     grad_norm = optax.global_norm(grads)
     return {
-        "policy_loss": loss,
-        "policy_grad_norm": grad_norm,
-        "policy_param_norm": param_norm,
+        "policy/loss": loss,
+        "policy/grad_norm": grad_norm,
+        "policy/param_norm": param_norm,
         **loss_metrics,
     }
 
@@ -314,10 +314,10 @@ def update_value_fn(ts: TrainState, batch):
     _, state = nnx.split(ts.value_fn)
     param_norm = optax.global_norm(state)
     return {
-        "value_loss": loss,
-        "value_grad_norm": grad_norm,
-        "value_param_norm": param_norm,
-        "value_mean_prediction": values,
+        "value/loss": loss,
+        "value/grad_norm": grad_norm,
+        "value/param_norm": param_norm,
+        "value/mean_prediction": values,
     }
 
 
@@ -348,8 +348,16 @@ def train_step(ts: TrainState):
         return ts, loss_info
 
     ts, loss_infos = update_epoch_scan(ts)
+    # take mean over minibatches but not epochs
+    size = loss_infos["policy/clip_frac"].shape
+    clip_fracs_per_epoch = loss_infos["policy/clip_frac"].mean(axis=1)
+    epoch_clip_frac_dict = {
+        f"epoch/clip_frac_{i}": clip_fracs_per_epoch[i]
+        for i in range(size[0])
+    }
+    # jax.debug.print(f"epoch_clip_frac_dict: {epoch_clip_frac_dict}")
     loss_infos = jax.tree.map(jnp.mean, loss_infos)
-    return info.update(**loss_infos)
+    return info.update(**loss_infos, **epoch_clip_frac_dict)
 
 
 def make_block_fn(block_size: int, logger: Logger):
@@ -363,22 +371,22 @@ def make_block_fn(block_size: int, logger: Logger):
         mean_episode_length = out_info.final.stats.length.mean()
         std_episode_length = out_info.final.stats.length.std()
         metrics = {
-            "mean_return": mean_return,
-            "std_return": std_return,
-            "mean_episode_length": mean_episode_length,
-            "std_episode_length": std_episode_length,
+            "episode/return": mean_return,
+            "episode/return_std": std_return,
+            "episode/length": mean_episode_length,
+            "episode/length_std": std_episode_length,
         }
         other_keys = [
-            "policy_loss",
-            "policy_entropy",
-            "policy_grad_norm",
-            "policy_param_norm",
-            "policy_approx_kl",
-            "policy_clip_frac",
-            "value_loss",
-            "value_grad_norm",
-            "value_param_norm",
-            "value_mean_prediction",
+            "policy/loss",
+            "policy/entropy",
+            "policy/grad_norm",
+            "policy/param_norm",
+            "policy/approx_kl",
+            "policy/clip_frac",
+            "value/loss",
+            "value/grad_norm",
+            "value/param_norm",
+            "value/mean_prediction",
         ]
         other_metrics = {k: getattr(out_info, k) for k in other_keys}
         metrics.update(other_metrics)
