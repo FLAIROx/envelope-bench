@@ -126,10 +126,10 @@ class Logger:
         # Print
         print(
             f"step: {step}, "
-            f"mean_return: {averaged['mean_return']:.4f}, "
+            f"mean_return: {averaged['episode/return']:.4f}, "
             f"sps: {self._sps:.0f}, "
-            f"policy_loss: {averaged['policy_loss']:.4f}, "
-            f"value_loss: {averaged['value_loss']:.4f}"
+            f"policy_loss: {averaged['policy/loss']:.4f}, "
+            f"value_loss: {averaged['value/loss']:.4f}"
         )
 
         if self._wandb_run is not None:

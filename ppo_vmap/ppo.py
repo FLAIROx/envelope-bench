@@ -274,10 +274,10 @@ def update_policy(ts: TrainState, batch):
         clip_frac = jnp.mean(ratio != clip_ratio)
         approx_kl = jnp.mean(((ratio - 1) - log_ratio))
         metrics = {
-            "policy_clipped_surrogate_loss": policy_loss,
-            "policy_entropy": entropy,
-            "policy_clip_frac": clip_frac,
-            "policy_approx_kl": approx_kl,
+            "policy/clipped_surrogate_loss": policy_loss,
+            "policy/entropy": entropy,
+            "policy/clip_frac": clip_frac,
+            "policy/approx_kl": approx_kl,
         }
         return loss, metrics
 
@@ -287,9 +287,9 @@ def update_policy(ts: TrainState, batch):
     param_norm = optax.global_norm(state)
     grad_norm = optax.global_norm(grads)
     return {
-        "policy_loss": loss,
-        "policy_grad_norm": grad_norm,
-        "policy_param_norm": param_norm,
+        "policy/loss": loss,
+        "policy/grad_norm": grad_norm,
+        "policy/param_norm": param_norm,
         **loss_metrics,
     }
 
@@ -310,10 +310,10 @@ def update_value_fn(ts: TrainState, batch):
     _, state = nnx.split(ts.value_fn)
     param_norm = optax.global_norm(state)
     return {
-        "value_loss": loss,
-        "value_grad_norm": grad_norm,
-        "value_param_norm": param_norm,
-        "value_mean_prediction": values,
+        "value/loss": loss,
+        "value/grad_norm": grad_norm,
+        "value/param_norm": param_norm,
+        "value/mean_prediction": values,
     }
 
 
@@ -345,7 +345,7 @@ def train_step(ts: TrainState):
 
     ts, loss_infos = update_epoch_scan(ts)
     loss_infos = jax.tree.map(jnp.mean, loss_infos)
-    return info.update(**loss_infos)
+    return info.update(loss_infos=loss_infos)
 
 
 def make_block_fn(block_size: int, logger: Logger):
@@ -357,24 +357,10 @@ def make_block_fn(block_size: int, logger: Logger):
         mean_return = out_info.final.stats.reward.mean()
         mean_episode_length = out_info.final.stats.length.mean()
         metrics = {
-            "mean_return": mean_return,
-            "mean_episode_length": mean_episode_length,
+            "episode/return": mean_return,
+            "episode/length": mean_episode_length,
+            **out_info.loss_infos,
         }
-        other_keys = [
-            "policy_loss",
-            "policy_entropy",
-            "policy_grad_norm",
-            "policy_param_norm",
-            "policy_approx_kl",
-            "policy_clip_frac",
-            "value_loss",
-            "value_grad_norm",
-            "value_param_norm",
-            "value_mean_prediction",
-        ]
-        other_metrics = {k: getattr(out_info, k) for k in other_keys}
-        metrics.update(other_metrics)
-
         jax.debug.callback(logger.log, ts.global_steps, ts.run_idx, metrics)
         return ts, mean_return
 
