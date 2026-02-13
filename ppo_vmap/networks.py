@@ -8,6 +8,7 @@ import envelope
 
 
 def ortho_linear(in_dim, out_dim, rngs, scale=jnp.sqrt(2)):
+    print(in_dim, out_dim)
     return nnx.Linear(
         in_dim, out_dim, rngs=rngs, kernel_init=nnx.initializers.orthogonal(scale)
     )
