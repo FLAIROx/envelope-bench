@@ -60,6 +60,9 @@ class Args:
     # parallelism: pmap across devices, vmap within each device
     num_runs: int = 16
 
+    # learning rate schedule
+    anneal_lr: bool = False
+
     # checkpointing
     num_checkpoints: int = 0
 
@@ -138,9 +141,17 @@ class TrainState(nnx.Pytree):
         )
 
         # Initialize optimizers
-        policy_opt = optax.adamw(args.policy_lr, eps=1e-5, weight_decay=args.policy_wd)
+        num_updates = args.total_timesteps // (args.num_steps * args.num_envs)
+        total_opt_steps = num_updates * args.num_epochs * args.num_minibatches
+        if args.anneal_lr:
+            policy_lr = optax.linear_schedule(args.policy_lr, 0.0, total_opt_steps)
+            value_lr = optax.linear_schedule(args.value_fn_lr, 0.0, total_opt_steps)
+        else:
+            policy_lr = args.policy_lr
+            value_lr = args.value_fn_lr
+        policy_opt = optax.adamw(policy_lr, eps=1e-5, weight_decay=args.policy_wd)
         self.policy_optimizer = nnx.Optimizer(self.policy, policy_opt, wrt=nnx.Param)
-        value_opt = optax.adamw(args.value_fn_lr, eps=1e-5, weight_decay=args.value_wd)
+        value_opt = optax.adamw(value_lr, eps=1e-5, weight_decay=args.value_wd)
         self.value_fn_optimizer = nnx.Optimizer(self.value_fn, value_opt, wrt=nnx.Param)
 
         # Initialize environment state and info
