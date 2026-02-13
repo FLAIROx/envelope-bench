@@ -18,7 +18,9 @@ from typing import Any, Callable, Literal, override
 
 import jax
 import jax.numpy as jnp
+from gymnax.environments import spaces as gymnax_spaces
 from kinetix.environment import ActionType, ObservationType, make_kinetix_env
+from kinetix.environment import spaces as kinetix_spaces
 from kinetix.environment.env import EnvParams as KinetixEnvEnvParams
 from kinetix.environment.env import KinetixEnv
 from kinetix.environment.env import StaticEnvParams as KinetixStaticEnvParams
@@ -226,11 +228,17 @@ class KinetixEnvelope(Environment):
     @override
     @cached_property
     def action_space(self) -> envelope_spaces.Space:
-        return _convert_gymnax_space(self.kinetix_env.action_space(self.env_params))
+        return _convert_space(self.kinetix_env.action_space(self.env_params))
 
     @override
     @cached_property
     def observation_space(self) -> envelope_spaces.Space:
-        return _convert_gymnax_space(
-            self.kinetix_env.observation_space(self.env_params)
-        )
+        return _convert_space(self.kinetix_env.observation_space(self.env_params))
+
+
+def _convert_space(kntx_space: gymnax_spaces.Space) -> envelope_spaces.Space:
+    if isinstance(kntx_space, kinetix_spaces.MultiDiscrete):
+        n = kntx_space.number_of_dims_per_distribution
+        n = n.astype(kntx_space.dtype)
+        return envelope_spaces.Discrete(n=n)
+    return _convert_gymnax_space(kntx_space)
