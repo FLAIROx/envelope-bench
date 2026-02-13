@@ -64,7 +64,17 @@ class Args:
 
 
 def make_env(args: Args):
-    env = envelope.create(args.env_name)
+    env_kwargs = {}
+    if args.env_name.startswith("kinetix::"):
+        from kinetix.environment import ActionType
+
+        env_kwargs.update(action_type=ActionType.MULTI_DISCRETE)
+        print("Creating kinetix env with multi-discrete action space")
+    if args.env_name.startswith("brax::"):
+        env_kwargs.update(backend="mjx")
+        print("Creating brax env with mjx backend")
+
+    env = envelope.create(args.env_name, env_kwargs=env_kwargs)
 
     if not hasattr(env, "max_steps"):
         env = envelope.TruncationWrapper(env, max_steps=DEFAULT_MAX_STEPS)
