@@ -124,9 +124,13 @@ class Logger:
             per_run[key] = values
             averaged[key] = np.nanmean(values)
 
+        # Compute elapsed time
+        elapsed = now - self.start_time if self.start_time is not None else 0.0
+
         # Append to HDF5
         self._h5_append("steps", step)
         self._h5_append("sps", self._sps)
+        self._h5_append("time/total_time", elapsed)
         for key in keys:
             self._h5_append(key, averaged[key])
             self._h5_append(f"{key}_per_run", per_run[key])
@@ -143,7 +147,7 @@ class Logger:
         )
 
         if self._wandb_run is not None:
-            wandb_data = {**averaged, "time/sps": self._sps}
+            wandb_data = {**averaged, "time/sps": self._sps, "time/total_time": elapsed}
             if self.num_runs > 1:
                 for key in keys:
                     wandb_data[f"{key}_std"] = np.nanstd(per_run[key])

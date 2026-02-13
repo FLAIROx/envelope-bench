@@ -371,7 +371,9 @@ def make_block_fn(block_size: int, logger: Logger):
         std_episode_length = out_info.final.stats.length.std()
         metrics = {
             "episode/return": mean_return,
+            "episode/return_std": std_return,
             "episode/length": mean_episode_length,
+            "episode/length_std": std_episode_length,
             **out_info.loss_infos,
         }
         jax.debug.callback(logger.log, ts.global_steps, ts.run_idx, metrics)
