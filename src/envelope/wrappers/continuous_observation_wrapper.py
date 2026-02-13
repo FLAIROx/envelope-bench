@@ -11,7 +11,7 @@ from envelope.wrappers.wrapper import Wrapper
 
 
 def to_float(obs: PyTree) -> PyTree:
-    return jax.tree.map(lambda x: x.astype(jnp.float32), obs)
+    return jax.tree.map(lambda x: jnp.asarray(x, dtype=jnp.float32), obs)
 
 
 def to_continuous(space: Discrete | Continuous) -> Continuous:
