@@ -187,9 +187,9 @@ class Logger:
             # mujoco_playground state has arrays with zero size. If so, we save without
             # the train_state without the current env_state
             env_state = train_states.env_state
-            train_states.env_state = None
+            state.env_state = None
             self._checkpointer.save(path, state)
-            train_states.env_state = env_state
+            state.env_state = env_state
 
         print(f"Started saving checkpoint (will finish asynchronously): {path}")
 
