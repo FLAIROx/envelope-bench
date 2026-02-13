@@ -50,6 +50,7 @@ class Args:
     activation: str = "tanh"
     layer_size: int = 256
     use_symlog: bool = False
+    optimizer: str = "adamw"
 
     # logging
     use_wandb: bool = False
@@ -149,9 +150,15 @@ class TrainState(nnx.Pytree):
         else:
             policy_lr = args.policy_lr
             value_lr = args.value_fn_lr
-        policy_opt = optax.adamw(policy_lr, eps=1e-5, weight_decay=args.policy_wd)
+
+        try:
+            optimizer = getattr(optax, args.optimizer)
+        except AttributeError:
+            optimizer = getattr(optax.contrib, args.optimizer)
+
+        policy_opt = optimizer(policy_lr, eps=1e-5, weight_decay=args.policy_wd)
         self.policy_optimizer = nnx.Optimizer(self.policy, policy_opt, wrt=nnx.Param)
-        value_opt = optax.adamw(value_lr, eps=1e-5, weight_decay=args.value_wd)
+        value_opt = optimizer(value_lr, eps=1e-5, weight_decay=args.value_wd)
         self.value_fn_optimizer = nnx.Optimizer(self.value_fn, value_opt, wrt=nnx.Param)
 
         # Initialize environment state and info
