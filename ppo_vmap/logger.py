@@ -100,9 +100,7 @@ class Logger:
     def _flush_step(self, step: int):
         """Average metrics across all runs and conditionally emit."""
         all_metrics = self.buffers.pop(step)
-        self._step_count += 1
-
-        if self._step_count % self.log_every != 0:
+        if step % self.log_every != 0:
             return
 
         # Update SPS from wall time between flushes

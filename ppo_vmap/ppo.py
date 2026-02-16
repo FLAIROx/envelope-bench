@@ -56,7 +56,7 @@ class Args:
     use_wandb: bool = False
     wandb_entity: str | None = "flair"
     wandb_project: str | None = "envelope-ppo"
-    log_every: int = 1
+    log_every: int = 131_072  # Log 768 times within 100663296 = 3 * 2**25 steps
 
     # parallelism: pmap across devices, vmap within each device
     num_runs: int = 16
