@@ -99,7 +99,6 @@ class Logger:
     def _flush_step(self, step: int):
         """Average metrics across all runs and conditionally emit."""
         all_metrics = self.buffers.pop(step)
-
         if step % self.log_every != 0:
             return
 
