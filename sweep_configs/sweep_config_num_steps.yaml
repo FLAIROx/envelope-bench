@@ -1,0 +1,232 @@
+command:
+  - python 
+  - -m
+  - ppo_vmap.ppo
+  - ${args}
+name: big-ppo-sweep-num_steps 
+method: grid
+metric:
+  name: episode/return
+  goal: maximize
+
+parameters:
+  # --- Fixed Parameters —
+  total_timesteps:
+    value: 100663296 # 2^25 *3
+  wandb_entity:
+    value: flair
+  wandb_project:
+    value: big-ppo-sweep
+  use_wandb:
+    value: True
+
+  # --- Experiment Configuration ---
+  env_name:
+    values:
+      - gymnax::Acrobot-v1
+      - gymnax::Asterix-MinAtar
+      - gymnax::BernoulliBandit-misc
+      - gymnax::Breakout-MinAtar
+      - gymnax::CartPole-v1
+      - gymnax::Catch-bsuite
+      - gymnax::DeepSea-bsuite
+      - gymnax::DiscountingChain-bsuite
+      - gymnax::FourRooms-misc
+      - gymnax::Freeway-MinAtar
+      - gymnax::GaussianBandit-misc
+      - gymnax::MNISTBandit-bsuite
+      - gymnax::MemoryChain-bsuite
+      - gymnax::MetaMaze-misc
+      - gymnax::MountainCar-v0
+      - gymnax::MountainCarContinuous-v0
+      - gymnax::Pendulum-v1
+      - gymnax::PointRobot-misc
+      - gymnax::Pong-misc
+      - gymnax::Reacher-misc
+      # - gymnax::SimpleBandit-bsuite
+      - gymnax::SpaceInvaders-MinAtar
+      - gymnax::Swimmer-misc
+      - gymnax::UmbrellaChain-bsuite
+      - brax::ant
+      - brax::halfcheetah
+      - brax::hopper
+      - brax::humanoid
+      - brax::humanoidstandup
+      - brax::inverted_double_pendulum
+      - brax::inverted_pendulum
+      - brax::pusher
+      - brax::reacher
+      - brax::walker2d
+      # - jumanji::BinPack-v2
+      - jumanji::CVRP-v1
+      # - jumanji::Cleaner-v0
+      # - jumanji::Connector-v2
+      - jumanji::FlatPack-v0
+      - jumanji::Game2048-v1
+      - jumanji::GraphColoring-v1
+      # - jumanji::JobShop-v0
+      - jumanji::Knapsack-v1
+      # - jumanji::LevelBasedForaging-v0
+      - jumanji::MMST-v0
+      - jumanji::Maze-v0
+      - jumanji::Minesweeper-v0
+      - jumanji::MultiCVRP-v0
+      - jumanji::PacMan-v1
+      - jumanji::RobotWarehouse-v0
+      - jumanji::RubiksCube-partly-scrambled-v0
+      - jumanji::RubiksCube-v0
+      - jumanji::SlidingTilePuzzle-v0
+      - jumanji::Snake-v1
+      - jumanji::Sokoban-v0
+      - jumanji::Sudoku-v0
+      - jumanji::Sudoku-very-easy-v0
+      - jumanji::TSP-v1
+      - jumanji::Tetris-v0
+      - craftax::Craftax-Symbolic-v1
+      - craftax::Craftax-Classic-Symbolic-v1
+      - navix::Navix-DistShift1-v0
+      - navix::Navix-DistShift2-v0
+      - navix::Navix-DoorKey-16x16-v0
+      - navix::Navix-DoorKey-5x5-v0
+      - navix::Navix-DoorKey-6x6-v0
+      - navix::Navix-DoorKey-8x8-v0
+      - navix::Navix-DoorKey-Random-16x16-v0
+      - navix::Navix-DoorKey-Random-5x5-v0
+      - navix::Navix-DoorKey-Random-6x6-v0
+      - navix::Navix-DoorKey-Random-8x8-v0
+      - navix::Navix-Dynamic-Obstacles-16x16-v0
+      - navix::Navix-Dynamic-Obstacles-5x5-Random-v0
+      - navix::Navix-Dynamic-Obstacles-5x5-v0
+      - navix::Navix-Dynamic-Obstacles-6x6-Random-v0
+      - navix::Navix-Dynamic-Obstacles-6x6-v0
+      - navix::Navix-Dynamic-Obstacles-8x8-v0
+      - navix::Navix-Empty-16x16-v0
+      - navix::Navix-Empty-5x5-v0
+      - navix::Navix-Empty-6x6-v0
+      - navix::Navix-Empty-8x8-v0
+      - navix::Navix-Empty-Random-16x16-v0
+      - navix::Navix-Empty-Random-5x5-v0
+      - navix::Navix-Empty-Random-6x6-v0
+      - navix::Navix-Empty-Random-8x8-v0
+      - navix::Navix-FourRooms-v0
+      - navix::Navix-GoToDoor-5x5-v0
+      - navix::Navix-GoToDoor-6x6-v0
+      - navix::Navix-GoToDoor-8x8-v0
+      - navix::Navix-KeyCorridorS3R1-v0
+      - navix::Navix-KeyCorridorS3R2-v0
+      - navix::Navix-KeyCorridorS3R3-v0
+      - navix::Navix-KeyCorridorS4R3-v0
+      - navix::Navix-KeyCorridorS5R3-v0
+      - navix::Navix-KeyCorridorS6R3-v0
+      - navix::Navix-LavaGapS5-v0
+      - navix::Navix-LavaGapS6-v0
+      - navix::Navix-LavaGapS7-v0
+      - navix::Navix-SimpleCrossingS11N5-v0
+      - navix::Navix-SimpleCrossingS9N1-v0
+      - navix::Navix-SimpleCrossingS9N2-v0
+      - navix::Navix-SimpleCrossingS9N3-v0
+      - mujoco_playground::AcrobotSwingup
+      - mujoco_playground::AcrobotSwingupSparse
+      - mujoco_playground::AeroCubeRotateZAxis
+      - mujoco_playground::AlohaHandOver
+      - mujoco_playground::AlohaSinglePegInsertion
+      - mujoco_playground::ApolloJoystickFlatTerrain
+      - mujoco_playground::BallInCup
+      - mujoco_playground::BarkourJoystick
+      - mujoco_playground::BerkeleyHumanoidJoystickFlatTerrain
+      - mujoco_playground::BerkeleyHumanoidJoystickRoughTerrain
+      - mujoco_playground::CartpoleBalance
+      - mujoco_playground::CartpoleBalanceSparse
+      - mujoco_playground::CartpoleSwingup
+      - mujoco_playground::CartpoleSwingupSparse
+      - mujoco_playground::CheetahRun
+      - mujoco_playground::FingerSpin
+      - mujoco_playground::FingerTurnEasy
+      - mujoco_playground::FingerTurnHard
+      - mujoco_playground::FishSwim
+      - mujoco_playground::G1JoystickFlatTerrain
+      - mujoco_playground::G1JoystickRoughTerrain
+      - mujoco_playground::Go1Footstand
+      - mujoco_playground::Go1Getup
+      - mujoco_playground::Go1Handstand
+      - mujoco_playground::Go1JoystickFlatTerrain
+      - mujoco_playground::Go1JoystickRoughTerrain
+      - mujoco_playground::H1InplaceGaitTracking
+      - mujoco_playground::H1JoystickGaitTracking
+      - mujoco_playground::HopperHop
+      - mujoco_playground::HopperStand
+      - mujoco_playground::HumanoidRun
+      - mujoco_playground::HumanoidStand
+      - mujoco_playground::HumanoidWalk
+      - mujoco_playground::LeapCubeReorient
+      - mujoco_playground::LeapCubeRotateZAxis
+      - mujoco_playground::Op3Joystick
+      - mujoco_playground::PandaOpenCabinet
+      - mujoco_playground::PandaPickCube
+      - mujoco_playground::PandaPickCubeCartesian
+      - mujoco_playground::PandaPickCubeOrientation
+      - mujoco_playground::PandaRobotiqPushCube
+      - mujoco_playground::PendulumSwingup
+      - mujoco_playground::PointMass
+      - mujoco_playground::ReacherEasy
+      - mujoco_playground::ReacherHard
+      - mujoco_playground::SpotFlatTerrainJoystick
+      - mujoco_playground::SpotGetup
+      - mujoco_playground::SpotJoystickGaitTracking
+      - mujoco_playground::SwimmerSwimmer6
+      - mujoco_playground::T1JoystickFlatTerrain
+      - mujoco_playground::T1JoystickRoughTerrain
+      - mujoco_playground::WalkerRun
+      - mujoco_playground::WalkerStand
+      - mujoco_playground::WalkerWalk
+      - kinetix::s
+      - kinetix::m
+      - kinetix::l
+  seed:
+    value: 0
+  num_envs:
+    value: 1024
+  num_steps:
+    values: [32, 128]
+  num_epochs:
+    value: 4
+  num_minibatches:
+    value: 8
+  policy_lr:
+    value: 3e-4
+  value_fn_lr:
+    value: 1e-4
+  policy_wd:
+    value: 0.0001
+  value_wd:
+    value: 0.0001
+  gamma:
+    value: 0.99
+  gae_lambda:
+    value: 0.95
+  entropy_coef:
+    value: 0.01
+  epsilon:
+    value: 0.2
+  normalize_observations:
+    value: True
+  normalize_rewards:
+    value: False
+  use_symlog:
+    value: False
+  layer_size:
+    value: 256
+  activation:
+    value: tanh
+  stagger_steps:
+    value: 1
+  pool_size:
+    value: 16
+  num_runs: 
+    value: 8
+  num_checkpoints:
+    value: 1
+  optimizer:
+    value: adamw
+  anneal_lr:
+    value: False
