@@ -22,31 +22,48 @@ def flatten_space(space: Space):
     return treedef, shapes, dims
 
 
-def flatten_x(x: PyTree):
+def flatten_x(x: PyTree, num_batch_dims: int = 0):
+    """Flatten obs leaves and concatenate into a single vector.
+
+    The first ``num_batch_dims`` axes are preserved; the remaining axes of each
+    leaf are flattened, then concatenated along the last axis.
+    """
     leaves = jax.tree.leaves(x)
-    xs = jax.tree.map(lambda x: jnp.asarray(x).reshape(-1), leaves)
-    x = jnp.concatenate(xs, axis=0)
-    return x
+    arrs = [jnp.asarray(leaf) for leaf in leaves]
+    batch_shape = arrs[0].shape[:num_batch_dims]
+    xs = [a.reshape(*batch_shape, -1) for a in arrs]
+    return jnp.concatenate(xs, axis=-1)
 
 
 class FlattenObservationWrapper(Wrapper):
+    @cached_property
+    def _num_batch_dims(self) -> int:
+        batch_dims, _ = peel_batched(self.env.observation_space)
+        return len(batch_dims)
+
+    def _flatten_info_obs(self, info: Info) -> Info:
+        """Flatten obs in info, and in info.final if present."""
+        n = self._num_batch_dims
+        info = info.update(obs=flatten_x(info.obs, n))
+        if hasattr(info, "final"):
+            flat_final = info.final.update(obs=flatten_x(info.final.obs, n))
+            info = info.update(final=flat_final)
+        return info
+
     @override
     def init(self, key: Key) -> tuple[State, Info]:
         state, info = self.env.init(key)
-        info = info.update(obs=flatten_x(info.obs))
-        return state, info
+        return state, self._flatten_info_obs(info)
 
     @override
     def reset(self, key: Key, state: State) -> tuple[State, Info]:
         state, info = self.env.reset(key, state)
-        info = info.update(obs=flatten_x(info.obs))
-        return state, info
+        return state, self._flatten_info_obs(info)
 
     @override
     def step(self, state: State, action: PyTree) -> tuple[State, Info]:
         state, info = self.env.step(state, action)
-        info = info.update(obs=flatten_x(info.obs))
-        return state, info
+        return state, self._flatten_info_obs(info)
 
     @override
     @cached_property
