@@ -77,6 +77,9 @@ ppo = [
     "tyro",
     "wandb",
 ]
+autotax = [
+    "clingo",
+]
 
 [tool.uv]
 override-dependencies = [
