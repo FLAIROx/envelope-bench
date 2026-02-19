@@ -4,6 +4,7 @@ command:
   - ppo_vmap.ppo
   - ${args}
 name: big-ppo-sweep-random-jumanji::Game2048-v1
+project: envelope-bench-random
 method: random
 run_cap: 50
 metric:
@@ -17,7 +18,7 @@ parameters:
   wandb_entity:
     value: flair
   wandb_project:
-    value: big-ppo-sweep
+    value: envelope-bench-random
   use_wandb:
     value: True
   env_name:
@@ -32,6 +33,8 @@ parameters:
     value: 8
   num_checkpoints:
     value: 1
+  log_dir:
+    value: /scratch/s5e/jarek.s5e/runs
   optimizer:
     value: adamw
   adam_epsilon:

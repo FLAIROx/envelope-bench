@@ -140,6 +140,8 @@ parameters:
     value: 8
   num_checkpoints:
     value: 1
+  log_dir:
+    value: /scratch/s5e/jarek.s5e/runs
   optimizer:
     value: adamw
   anneal_lr:

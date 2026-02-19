@@ -4,7 +4,7 @@ set -e
 SWEEP_DIR="sweep_configs"
 ARRAY_SIZE=1       # 0-30 = 31 agents per sweep
 TIME="24:00:00"
-WANDB_ENTITY="TWWB"
+WANDB_ENTITY="flair"
 WANDB_PROJECT="envelope-bench"
 
 for config in "$SWEEP_DIR"/*.yaml; do

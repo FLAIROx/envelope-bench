@@ -33,7 +33,7 @@ class Args:
 
     # wandb
     use_wandb: bool = False
-    wandb_entity: str | None = None
+    wandb_entity: str | None = "flair"
     wandb_project: str | None = "envelope-ppo"
     wandb_log_every: int = 1
 

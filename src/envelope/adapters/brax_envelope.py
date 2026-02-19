@@ -1,4 +1,3 @@
-import dataclasses
 import warnings
 from copy import copy
 from functools import cached_property
@@ -75,18 +74,15 @@ class BraxEnvelope(Environment):
     def init(self, key: Key) -> tuple[State, Info]:
         brax_state = self.brax_env.reset(key)
         info = InfoContainer(obs=brax_state.obs, reward=0.0, terminated=False)
-        info = info.update(**dataclasses.asdict(brax_state))
+        info = info.update(metrics=brax_state.metrics, info=brax_state.info)
         return brax_state, info
 
     @override
     def step(self, state: State, action: PyTree) -> tuple[State, Info]:
         brax_state = self.brax_env.step(state, action)
-        info = InfoContainer(
-            obs=brax_state.obs,
-            reward=brax_state.reward,
-            terminated=jnp.asarray(brax_state.done, dtype=bool),
-        )
-        info = info.update(**dataclasses.asdict(brax_state))
+        term = jnp.asarray(brax_state.done, dtype=bool)
+        info = InfoContainer(obs=brax_state.obs, reward=brax_state.reward, terminated=term)
+        info = info.update(metrics=brax_state.metrics, info=brax_state.info)
         return brax_state, info
 
     @override

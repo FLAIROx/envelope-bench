@@ -37,7 +37,6 @@ class Logger:
         self.num_runs = args.num_runs
         self.log_every = args.log_every
         self.start_time: float | None = None
-        self._step_count = 0
         self._prev_flush_time: float | None = None
         self._prev_flush_step: int = 0
         self._sps: float = 0
@@ -48,7 +47,7 @@ class Logger:
         # Setup run directory
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         self.run_name = f"{args.env_name}_{timestamp}"
-        self.run_dir = os.path.abspath(os.path.join("runs", args.env_name, timestamp))
+        self.run_dir = os.path.abspath(os.path.join(args.log_dir, args.env_name, timestamp))
         try:
             os.makedirs(self.run_dir, exist_ok=True)
         # linux filesystem doesnt allow for :: in directory names
@@ -100,9 +99,8 @@ class Logger:
     def _flush_step(self, step: int):
         """Average metrics across all runs and conditionally emit."""
         all_metrics = self.buffers.pop(step)
-        self._step_count += 1
 
-        if self._step_count % self.log_every != 0:
+        if step % self.log_every != 0:
             return
 
         # Update SPS from wall time between flushes

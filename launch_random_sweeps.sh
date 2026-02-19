@@ -4,7 +4,7 @@ set -e
 SWEEP_DIR="sweep_configs_random/envs"
 ARRAY_SIZE=1       # 0-1 = 2 agents per sweep
 TIME="24:00:00"
-WANDB_ENTITY="TWWB"
+WANDB_ENTITY="flair"
 WANDB_PROJECT="envelope-bench"
 
 if [ ! -d "$SWEEP_DIR" ]; then
@@ -12,11 +12,13 @@ if [ ! -d "$SWEEP_DIR" ]; then
     exit 1
 fi
 
+source "$(dirname "$0")/.venv/bin/activate"
+
 for config in "$SWEEP_DIR"/*.yaml; do
     sweep_name=$(basename "$config" .yaml)
     echo "=== Creating sweep from: $config ==="
 
-    sweep_output=$(wandb sweep --entity flair "$config" 2>&1)
+    sweep_output=$(wandb sweep --entity flair --project envelope-bench-random "$config" 2>&1)
     echo "$sweep_output"
 
     sweep_id=$(echo "$sweep_output" | grep -oP 'wandb agent \K\S+' | tail -1)

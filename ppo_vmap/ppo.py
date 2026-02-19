@@ -61,16 +61,22 @@ class Args:
     use_wandb: bool = False
     wandb_entity: str | None = "flair"
     wandb_project: str | None = "envelope-ppo"
-    log_every: int = 1
+    log_every: int = 131_072  # Log 768 times within 100663296 = 3 * 2**25 steps
 
     # parallelism: pmap across devices, vmap within each device
     num_runs: int = 16
+
+    # gradient clipping
+    max_grad_norm: float = float("inf")
 
     # learning rate schedule
     anneal_lr: bool = False
 
     # checkpointing
     num_checkpoints: int = 0
+
+    # logging
+    log_dir: str = "runs"
 
 
 def make_env(args: Args):
@@ -172,9 +178,15 @@ class TrainState(nnx.Pytree):
         except AttributeError:
             optimizer = getattr(optax.contrib, args.optimizer)
 
-        policy_opt = optimizer(policy_lr, eps=args.adam_epsilon, weight_decay=args.policy_wd)
+        policy_opt = optax.chain(
+            optax.clip_by_global_norm(args.max_grad_norm),
+            optimizer(policy_lr, eps=args.adam_epsilon, weight_decay=args.policy_wd),
+        )
         self.policy_optimizer = nnx.Optimizer(self.policy, policy_opt, wrt=nnx.Param)
-        value_opt = optimizer(value_lr, eps=args.adam_epsilon, weight_decay=args.value_wd)
+        value_opt = optax.chain(
+            optax.clip_by_global_norm(args.max_grad_norm),
+            optimizer(value_lr, eps=args.adam_epsilon, weight_decay=args.value_wd),
+        )
         self.value_fn_optimizer = nnx.Optimizer(self.value_fn, value_opt, wrt=nnx.Param)
 
         # Initialize environment state and info
@@ -337,9 +349,9 @@ def update_value_fn(ts: TrainState, batch):
     def loss_fn(value_fn):
         targets = batch.value + batch.advantages
         raw_values = value_fn.raw(batch.obs)
-        if args.use_symlog:
+        if ts.args.use_symlog:
             targets = symlog(targets)
-        values = raw_values if not args.use_symlog else symexp(raw_values)
+        values = raw_values if not ts.args.use_symlog else symexp(raw_values)
         return 0.5 * jnp.mean((raw_values - targets) ** 2), values.mean()
 
     (loss, values), grads = loss_fn(ts.value_fn)

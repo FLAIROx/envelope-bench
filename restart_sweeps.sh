@@ -9,13 +9,13 @@ set -e
 
 ARRAY_SIZE=1       # match the original launch
 TIME="24:00:00"
-WANDB_ENTITY="TWWB"
+WANDB_ENTITY="flair"
 WANDB_PROJECT="envelope-bench"
 
 # Map sweep name -> sweep ID (fill these in from wandb UI or logs)
 declare -A SWEEP_IDS=(
-    # ["sweep_config_act"]="TWWB/envelope-bench/XXXXXXXX"
-    # ["sweep_config_adam_eps"]="TWWB/envelope-bench/XXXXXXXX"
+    # ["sweep_config_act"]="flair/envelope-bench/XXXXXXXX"
+    # ["sweep_config_adam_eps"]="flair/envelope-bench/XXXXXXXX"
     # ...
 )
 
