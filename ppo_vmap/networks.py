@@ -7,10 +7,61 @@ from flax import nnx
 import envelope
 
 
+def get_ortho_gain(activation_name: str) -> float:
+    name = activation_name.lower()
+    if name in ("relu", "swish", "mish"):
+        return 2 ** 0.5  # sqrt(2), He-like
+    if name == "tanh":
+        return 5 / 3
+    return 1.0
+
+
 def ortho_linear(in_dim, out_dim, rngs, scale=jnp.sqrt(2)):
     return nnx.Linear(
         in_dim, out_dim, rngs=rngs, kernel_init=nnx.initializers.orthogonal(scale)
     )
+
+
+def make_linear(
+    in_dim,
+    out_dim,
+    rngs,
+    init="orthogonal",
+    activation_name="tanh",
+    bias_init=nnx.initializers.zeros,
+):
+    name = init.lower()
+    act_name = activation_name.lower()
+
+    if name == "orthogonal":
+        kernel_init = nnx.initializers.orthogonal(get_ortho_gain(act_name))
+    elif name == "xavier":
+        kernel_init = nnx.initializers.glorot_uniform()
+    elif name == "variance_scaling":
+        if act_name in ("relu", "swish", "mish"):
+            kernel_init = nnx.initializers.he_uniform()
+        else:
+            kernel_init = nnx.initializers.glorot_uniform()
+    else:
+        raise ValueError(f"Unknown init: {init}")
+
+    return nnx.Linear(
+        in_dim, out_dim, rngs=rngs, kernel_init=kernel_init, bias_init=bias_init
+    )
+
+
+def build_mlp_layers(in_dim, layer_size, num_layers, rngs, activation_name, layer_norm, init):
+    act = get_activation(activation_name)
+    layers = []
+    for i in range(num_layers):
+        in_features = in_dim if i == 0 else layer_size
+        layers.append(
+            make_linear(in_features, layer_size, rngs, init=init, activation_name=activation_name)
+        )
+        if layer_norm:
+            layers.append(nnx.LayerNorm(layer_size, rngs=rngs))
+        layers.append(act)
+    return layers
 
 
 class Identity(nnx.Module):
@@ -52,22 +103,14 @@ class ValueFunction(nnx.Module):
         layer_size: int = 256,
         activation: str = "swish",
         use_symexp: bool = False,
+        num_layers: int = 3,
+        layer_norm: bool = True,
+        init: str = "orthogonal",
     ):
         in_dim = np.prod(obs_space.shape)
-        act = get_activation(activation)
         self.use_symexp = use_symexp
-        self.layers = nnx.Sequential(
-            ortho_linear(in_dim, layer_size, rngs),
-            nnx.LayerNorm(layer_size, rngs=rngs),
-            act,
-            ortho_linear(layer_size, layer_size, rngs),
-            nnx.LayerNorm(layer_size, rngs=rngs),
-            act,
-            ortho_linear(layer_size, layer_size, rngs),
-            nnx.LayerNorm(layer_size, rngs=rngs),
-            act,
-            ortho_linear(layer_size, 1, rngs, scale=1.0),
-        )
+        trunk = build_mlp_layers(in_dim, layer_size, num_layers, rngs, activation, layer_norm, init)
+        self.layers = nnx.Sequential(*trunk, ortho_linear(layer_size, 1, rngs, scale=1.0))
 
     def __call__(self, obs: jax.Array) -> jax.Array:
         v = self.raw(obs)
@@ -87,26 +130,26 @@ class GaussianPolicy(nnx.Module):
         rngs: nnx.Rngs,
         layer_size: int = 256,
         activation: str = "swish",
+        num_layers: int = 3,
+        layer_norm: bool = True,
+        init: str = "orthogonal",
+        initial_log_std: float = 0.0,
     ):
         in_dim = np.prod(obs_space.shape)
         out_dim = np.prod(action_space.shape)
         self.action_low, self.action_high = action_space.low, action_space.high
         self.std_min, self.std_max = -5, 2
 
-        act = get_activation(activation)
-        self.layers = nnx.Sequential(
-            ortho_linear(in_dim, layer_size, rngs),
-            nnx.LayerNorm(layer_size, rngs=rngs),
-            act,
-            ortho_linear(layer_size, layer_size, rngs),
-            nnx.LayerNorm(layer_size, rngs=rngs),
-            act,
-            ortho_linear(layer_size, layer_size, rngs),
-            nnx.LayerNorm(layer_size, rngs=rngs),
-            act,
-        )
+        trunk = build_mlp_layers(in_dim, layer_size, num_layers, rngs, activation, layer_norm, init)
+        self.layers = nnx.Sequential(*trunk)
         self.action_mean = ortho_linear(layer_size, out_dim, rngs, scale=0.01)
-        self.action_log_std = ortho_linear(layer_size, out_dim, rngs, scale=0.01)
+        self.action_log_std = nnx.Linear(
+            layer_size,
+            out_dim,
+            rngs=rngs,
+            kernel_init=nnx.initializers.orthogonal(0.01),
+            bias_init=nnx.initializers.constant(initial_log_std),
+        )
 
     def __call__(self, obs: jax.Array) -> distrax.Distribution:
         features = self.layers(obs)
@@ -169,20 +212,15 @@ class DiscretePolicy(nnx.Module):
         rngs: nnx.Rngs,
         layer_size: int = 256,
         activation: str = "swish",
+        num_layers: int = 3,
+        layer_norm: bool = True,
+        init: str = "orthogonal",
     ):
         in_dim = jnp.prod(jnp.array(obs_space.shape))
         out_dim = jnp.prod(jnp.asarray(action_space.n))
         self.n = nnx.static(jnp.asarray(action_space.n).tolist())
-        act = get_activation(activation)
-        self.layers = nnx.Sequential(
-            ortho_linear(in_dim, layer_size, rngs),
-            nnx.LayerNorm(layer_size, rngs=rngs),
-            act,
-            ortho_linear(layer_size, layer_size, rngs),
-            nnx.LayerNorm(layer_size, rngs=rngs),
-            act,
-            ortho_linear(layer_size, out_dim, rngs, scale=0.01),
-        )
+        trunk = build_mlp_layers(in_dim, layer_size, num_layers, rngs, activation, layer_norm, init)
+        self.layers = nnx.Sequential(*trunk, ortho_linear(layer_size, out_dim, rngs, scale=0.01))
 
     def __call__(self, obs: jax.Array) -> distrax.Distribution:
         action_logits = self.layers(obs)

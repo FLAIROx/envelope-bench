@@ -51,6 +51,11 @@ class Args:
     layer_size: int = 256
     use_symlog: bool = False
     optimizer: str = "adamw"
+    adam_epsilon: float = 1e-5
+    num_layers: int = 3
+    layer_norm: bool = True
+    init: str = "orthogonal"
+    initial_log_std: float = 0.0
 
     # logging
     use_wandb: bool = False
@@ -126,12 +131,20 @@ class TrainState(nnx.Pytree):
         # Initialize policy and value function
         discrete = isinstance(env.action_space, envelope.Discrete)
         policy_cls = DiscretePolicy if discrete else GaussianPolicy
+        policy_kwargs = dict(
+            activation=args.activation,
+            layer_size=args.layer_size,
+            num_layers=args.num_layers,
+            layer_norm=args.layer_norm,
+            init=args.init,
+        )
+        if not discrete:
+            policy_kwargs["initial_log_std"] = args.initial_log_std
         self.policy = policy_cls(
             env.observation_space,
             env.action_space,
             self.rngs,
-            activation=args.activation,
-            layer_size=args.layer_size,
+            **policy_kwargs,
         )
         self.value_fn = ValueFunction(
             env.observation_space,
@@ -139,6 +152,9 @@ class TrainState(nnx.Pytree):
             activation=args.activation,
             layer_size=args.layer_size,
             use_symexp=args.use_symlog,
+            num_layers=args.num_layers,
+            layer_norm=args.layer_norm,
+            init=args.init,
         )
 
         # Initialize optimizers
@@ -156,9 +172,9 @@ class TrainState(nnx.Pytree):
         except AttributeError:
             optimizer = getattr(optax.contrib, args.optimizer)
 
-        policy_opt = optimizer(policy_lr, eps=1e-5, weight_decay=args.policy_wd)
+        policy_opt = optimizer(policy_lr, eps=args.adam_epsilon, weight_decay=args.policy_wd)
         self.policy_optimizer = nnx.Optimizer(self.policy, policy_opt, wrt=nnx.Param)
-        value_opt = optimizer(value_lr, eps=1e-5, weight_decay=args.value_wd)
+        value_opt = optimizer(value_lr, eps=args.adam_epsilon, weight_decay=args.value_wd)
         self.value_fn_optimizer = nnx.Optimizer(self.value_fn, value_opt, wrt=nnx.Param)
 
         # Initialize environment state and info

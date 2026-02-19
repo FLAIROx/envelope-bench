@@ -1,16 +1,12 @@
-from typing import override
-from functools import cached_property
-
 import jax
 from jax import numpy as jnp
+from typing_extensions import override
 
 from envelope.environment import Info
-from envelope.struct import field
+from envelope.struct import field, static_field
 from envelope.typing import Key, PyTree
-from envelope.wrappers.normalization import update_rmv, RunningMeanVar
+from envelope.wrappers.normalization import RunningMeanVar, update_rmv
 from envelope.wrappers.wrapper import WrappedState, Wrapper
-from envelope.typing import Array
-from envelope.struct import FrozenPyTreeNode, static_field
 
 
 class RewardRunningMeanVar(RunningMeanVar):
