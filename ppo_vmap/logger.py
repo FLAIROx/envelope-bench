@@ -52,12 +52,14 @@ class Logger:
             os.makedirs(self.run_dir, exist_ok=True)
         # linux filesystem doesnt allow for :: in directory names
         except OSError as e:
+            # save to scratch space on isambard
+            scratch = os.environ.get("SCRATCHDIR", os.path.expanduser("~/scratch"))
+            self.run_dir = os.path.join(scratch, args.env_name.replace("::", "-"), timestamp)
+            os.makedirs(self.run_dir, exist_ok=True)
             print(
                 f"Error creating run directory {self.run_dir}: {e}, "
-                f"saving to {self.run_dir.replace('::', '-')}"
+                f"saving to {self.run_dir}."
             )
-            self.run_dir = self.run_dir.replace("::", "-")
-            os.makedirs(self.run_dir, exist_ok=True)
 
         # Save config
         config_path = os.path.join(self.run_dir, "config.json")

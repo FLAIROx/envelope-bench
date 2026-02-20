@@ -42,6 +42,7 @@ class Args:
     normalize_observations: bool = True
     normalize_rewards: bool = False
     discretize_actions: bool = False
+    adam_epsilon: float = 1e-5
     seed: int = 0
 
     stagger_steps: int = 1
@@ -219,8 +220,9 @@ def make_train_states(args: Args):
     assert args.num_runs % num_devices == 0, (
         f"num_runs ({args.num_runs}) must be divisible by device_count ({num_devices})"
     )
-
+    t0 = time.time()
     env_vecenv = make_env(args)
+    make_env_time = time.time() - t0
     states = [
         TrainState(args, seed=args.seed + i, run_idx=i, env_vecenv=env_vecenv)
         for i in range(args.num_runs)
@@ -235,7 +237,7 @@ def make_train_states(args: Args):
         lambda *xs: jnp.stack(xs).reshape(num_devices, runs_per_device, *xs[0].shape),
         *all_states,
     )
-    return graphdef, batched_state
+    return graphdef, batched_state, make_env_time
 
 
 def shuffle_and_split(data: PyTree, num_minibatches: int, key: jax.Array):
@@ -464,14 +466,14 @@ if __name__ == "__main__":
 
     # Create train states: (graphdef, batched_state) with shape
     # (num_devices, runs_per_device, ...)
-    graphdef, batched_state = make_train_states(args)
+    graphdef, batched_state, make_env_time = make_train_states(args)
 
     # Build pmap(vmap(scan)) step function (AOT compiled)
     train_block = make_block_fn(block_size, logger)
     step_fn, lower_time, compile_time = make_pmap_vmap_step(
         graphdef, train_block, batched_state
     )
-    logger.log_once({"time/lower": lower_time, "time/compile": compile_time})
+    logger.log_once({"time/lower": lower_time, "time/compile": compile_time, "time/make_env": make_env_time})
 
     # Run training blocks
     logger.start_time = time.time()

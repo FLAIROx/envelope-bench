@@ -7,7 +7,7 @@ set -e
 # Set SWEEP_IDS below to the sweep IDs from your original launch.
 # You can find them with: wandb sweep --list or in the wandb UI.
 
-ARRAY_SIZE=1       # match the original launch
+ARRAY_SIZE=2       # match the original launch
 TIME="24:00:00"
 WANDB_ENTITY="flair"
 WANDB_PROJECT="envelope-bench"

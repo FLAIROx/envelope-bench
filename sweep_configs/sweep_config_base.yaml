@@ -3,7 +3,7 @@ command:
   - -m
   - ppo_vmap.ppo
   - ${args}
-name: big-ppo-sweep-base 
+name: big-ppo-sweep-base
 method: grid
 metric:
   name: episode/return
@@ -187,7 +187,7 @@ parameters:
   num_envs:
     value: 1024
   num_steps:
-    value: 64 
+    value: 64
   num_epochs:
     value: 4
   num_minibatches:
@@ -222,7 +222,7 @@ parameters:
     value: 1
   pool_size:
     value: 16
-  num_runs: 
+  num_runs:
     value: 8
   num_checkpoints:
     value: 1

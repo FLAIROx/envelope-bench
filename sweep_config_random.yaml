@@ -1,25 +1,26 @@
 command:
   - python 
   - -m
-  - ppo_vmap.ppo
+  - ppo_vmap.random
   - ${args}
-name: big-ppo-sweep
+name: random-policies
 method: grid
 metric:
-  name: mean_return
+  name: episode/return
   goal: maximize
 
 parameters:
   # --- Fixed Parameters —
   total_timesteps:
-    value: 100000000 # 100M
+    value: 1000000
   wandb_entity:
     value: flair
   wandb_project:
     value: big-ppo-sweep
   use_wandb:
     value: True
-
+  log_every:
+    value: 10000
 
   # --- Experiment Configuration ---
   env_name:
@@ -44,7 +45,7 @@ parameters:
       - gymnax::PointRobot-misc
       - gymnax::Pong-misc
       - gymnax::Reacher-misc
-      - gymnax::SimpleBandit-bsuite
+      # - gymnax::SimpleBandit-bsuite
       - gymnax::SpaceInvaders-MinAtar
       - gymnax::Swimmer-misc
       - gymnax::UmbrellaChain-bsuite
@@ -61,13 +62,13 @@ parameters:
       - jumanji::BinPack-v2
       - jumanji::CVRP-v1
       - jumanji::Cleaner-v0
-      - jumanji::Connector-v2
+      # - jumanji::Connector-v2
       - jumanji::FlatPack-v0
       - jumanji::Game2048-v1
       - jumanji::GraphColoring-v1
-      - jumanji::JobShop-v0
+      # - jumanji::JobShop-v0
       - jumanji::Knapsack-v1
-      - jumanji::LevelBasedForaging-v0
+      # - jumanji::LevelBasedForaging-v0
       - jumanji::MMST-v0
       - jumanji::Maze-v0
       - jumanji::Minesweeper-v0
@@ -180,122 +181,18 @@ parameters:
       - mujoco_playground::WalkerRun
       - mujoco_playground::WalkerStand
       - mujoco_playground::WalkerWalk
-      - kinetix::l/car_launch
-      - kinetix::l/car_swing_around
-      - kinetix::l/chain_lander
-      - kinetix::l/chain_thrust
-      - kinetix::l/gears
-      - kinetix::l/grasp_easy
-      - kinetix::l/grasp_hard
-      - kinetix::l/h0_angrybirds
-      - kinetix::l/h10_morph_direction_2
-      - kinetix::l/h11_obstacle_avoidance
-      - kinetix::l/h12_platformer_1
-      - kinetix::l/h13_platformer_2
-      - kinetix::l/h14_simple_thruster
-      - kinetix::l/h15_swing_up
-      - kinetix::l/h16_thruster_goal
-      - kinetix::l/h17_unicycle
-      - kinetix::l/h1_car_left
-      - kinetix::l/h2_car_ramp
-      - kinetix::l/h3_car_right
-      - kinetix::l/h4_cartpole
-      - kinetix::l/h5_flappy_bird
-      - kinetix::l/h6_lorry
-      - kinetix::l/h7_maze_1
-      - kinetix::l/h8_maze_2
-      - kinetix::l/h9_morph_direction
-      - kinetix::l/hard_beam_balance
-      - kinetix::l/hard_cartpole_thrust
-      - kinetix::l/hard_cartpole_wheels
-      - kinetix::l/hard_lunar_lander
-      - kinetix::l/hard_pinball
-      - kinetix::l/lever_puzzle
-      - kinetix::l/mjc_half_cheetah
-      - kinetix::l/mjc_half_cheetah_easy
-      - kinetix::l/mjc_hopper
-      - kinetix::l/mjc_hopper_easy
-      - kinetix::l/mjc_swimmer
-      - kinetix::l/mjc_walker
-      - kinetix::l/mjc_walker_easy
-      - kinetix::l/pr
-      - kinetix::l/rail
-      - kinetix::m/arm_hard
-      - kinetix::m/arm_left
-      - kinetix::m/arm_right
-      - kinetix::m/arm_up
-      - kinetix::m/h0_unicycle
-      - kinetix::m/h10_thrust_right_easy
-      - kinetix::m/h11_thrust_left_easy
-      - kinetix::m/h12_thrustfall_left
-      - kinetix::m/h13_thrustfall_right
-      - kinetix::m/h14_thrustblock
-      - kinetix::m/h15_thrustshoot
-      - kinetix::m/h16_thrustcontrol_right
-      - kinetix::m/h17_thrustcontrol_left
-      - kinetix::m/h18_thrust_right_very_easy
-      - kinetix::m/h19_thrust_left_very_easy
-      - kinetix::m/h1_car_left
-      - kinetix::m/h2_car_right
-      - kinetix::m/h3_car_thrust
-      - kinetix::m/h4_thrust_the_needle
-      - kinetix::m/h5_angry_birds
-      - kinetix::m/h6_thrust_over
-      - kinetix::m/h7_car_flip
-      - kinetix::m/h8_weird_vehicle
-      - kinetix::m/h9_spin_the_right_way
-      - kinetix::s/h0_weak_thrust
-      - kinetix::s/h1_thrust_over_ball
-      - kinetix::s/h2_one_wheel_car
-      - kinetix::s/h3_point_the_thruster
-      - kinetix::s/h4_thrust_aim
-      - kinetix::s/h5_rotate_fall
-      - kinetix::s/h6_unicycle_right
-      - kinetix::s/h7_unicycle_left
-      - kinetix::s/h8_unicycle_balance
-      - kinetix::s/h9_explode_then_thrust_over
+      - kinetix::s
+      - kinetix::m
+      - kinetix::l
   seed:
     value: 0
-  num_envs:
-    value: 1024
-  num_steps:
-    value: 64
-  num_epochs:
-    value: 4
-  num_minibatches:
-    value: 8
-  policy_lr:
-    value: 3e-4
-  value_fn_lr:
-    value: 3e-4
-  policy_wd:
-    value: 0.0001
-  value_wd:
-    value: 0.0001
-  gamma:
-    value: 0.99
-  gae_lambda:
-    value: 0.95
-  entropy_coef:
-    value: 0.01
-  epsilon:
-    value: 0.2
-  normalize_observations:
-    value: True
-  normalize_rewards:
-    value: False
-  use_symlog:
-    value: True
-  layer_size:
-    value: 256
-  activation:
-    value: tanh
   stagger_steps:
-    value: 1
-  pool_size:
-    value: 16
-  num_runs: 
+    value: 0
+  num_runs:
     value: 8
-  num_checkpoints:
-    value: 1
-
+  num_envs:
+    value: 100
+  normalize_observations:
+    value: False
+  pool_size:
+    value: 10

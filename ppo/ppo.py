@@ -17,18 +17,21 @@ from ppo.networks import DiscretePolicy, GaussianPolicy, ValueFunction
 class Args:
     env_name: str = "gymnax::CartPole-v1"
     total_timesteps: int = 1000000
-    policy_lr: float = 0.001
-    value_fn_lr: float = 0.001
+    policy_lr: float = 0.0003
+    value_fn_lr: float = 0.0001
+    policy_wd: float = 0.0001
+    value_fn_wd: float = 0.0001
     epsilon: float = 0.2
     entropy_coef: float = 0.01
-    num_envs: int = 10
+    num_envs: int = 1024
     pool_size: int = 10
-    num_minibatches: int = 5
+    num_minibatches: int = 8
     num_epochs: int = 4
-    num_steps: int = 100
+    num_steps: int = 64
     gamma: float = 0.99
     gae_lambda: float = 0.95
-    normalize_observations: bool = False
+    normalize_observations: bool = True
+    normalize_rewards: bool = False
     seed: int = 0
 
     # wandb

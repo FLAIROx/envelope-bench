@@ -3,7 +3,7 @@ command:
   - -m
   - ppo_vmap.ppo
   - ${args}
-name: big-ppo-sweep-policy_wd 
+name: big-ppo-sweep-policy_wd
 method: grid
 metric:
   name: episode/return
@@ -222,7 +222,7 @@ parameters:
     value: 1
   pool_size:
     value: 16
-  num_runs: 
+  num_runs:
     value: 8
   num_checkpoints:
     value: 1

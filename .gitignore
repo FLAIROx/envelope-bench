@@ -175,3 +175,7 @@ wandb/
 .cursorignore
 AGENTS.md
 CLAUDE.md
+
+# specific to this project
+runs/
+outputs/
