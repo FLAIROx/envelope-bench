@@ -36,8 +36,8 @@ class Args:
 
     # wandb
     use_wandb: bool = False
-    wandb_entity: str | None = "flair"
-    wandb_project: str | None = "envelope-ppo"
+    wandb_entity: str | None = "aneeshmuppidi19"
+    wandb_project: str | None = "envelope-ppo-test"
     wandb_log_every: int = 1
 
 

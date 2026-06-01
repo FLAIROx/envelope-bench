@@ -179,3 +179,12 @@ CLAUDE.md
 # specific to this project
 runs/
 outputs/
+
+# Slurm logs (top-level and nested, e.g. slurm_scripts/slurmlogs/)
+slurmlogs/
+slurm-*.out
+slurm-*.err
+
+# Orbax / training checkpoints
+*.orbax-checkpoint-tmp*
+checkpoints/
